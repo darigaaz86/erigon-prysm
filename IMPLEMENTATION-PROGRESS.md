@@ -1,6 +1,8 @@
 # HotStuff Implementation Progress
 
-## Status: Step 3 Complete ✅
+## Status: Step 4 Complete ✅
+
+### Completed: Three-Phase Protocol (Week 4)
 
 ### Completed: Leader Election (Week 3)
 
@@ -161,23 +163,49 @@ prysm/beacon-chain/
    - Invalid input tests
    - Factory tests
 
+#### Files Created (Step 4)
+
+1. **`prysm/beacon-chain/consensus/hotstuff/service.go`** (360 lines)
+   - Main HotStuff consensus service
+   - Lifecycle management (Start/Stop)
+   - Genesis initialization
+   - Consensus interface implementation
+   - Main event loop
+
+2. **`prysm/beacon-chain/consensus/hotstuff/phases.go`** (380 lines)
+   - Three-phase protocol implementation
+   - PREPARE, PRE-COMMIT, COMMIT, DECIDE phases
+   - Vote creation and collection
+   - Phase advancement logic
+   - Block verification and execution
+   - Safety rules for voting
+
+3. **`prysm/beacon-chain/consensus/hotstuff/voting.go`** (220 lines)
+   - Vote handling and verification
+   - View change mechanism
+   - Timeout handling
+   - View change message verification
+   - View progression
+
+4. **`prysm/beacon-chain/consensus/hotstuff/phases_test.go`** (292 lines)
+   - Service lifecycle tests
+   - Genesis initialization tests
+   - Voting logic tests
+   - Phase advancement tests
+   - View progression tests
+   - Block verification tests
+
 ## Next Steps
 
-### Step 4: Implement Three-Phase Protocol (Week 4)
-
-**Files to create:**
-- `prysm/beacon-chain/consensus/hotstuff/phases.go`
-- `prysm/beacon-chain/consensus/hotstuff/voting.go`
-- `prysm/beacon-chain/consensus/hotstuff/phases_test.go`
+### Step 5: Integration and Testing (Week 5-6)
 
 **Tasks:**
-1. Implement PREPARE phase
-2. Implement PRE-COMMIT phase
-3. Implement COMMIT phase
-4. Implement DECIDE phase
-5. Add vote collection and aggregation
-6. Add timeout handling
-7. Add unit tests
+1. Integrate HotStuff with blockchain service
+2. Add execution layer integration
+3. Add network layer (P2P) integration
+4. End-to-end testing
+5. Performance benchmarks
+6. Byzantine fault tests
 
 ### Step 3: Implement Leader Election (Week 3)
 
@@ -244,11 +272,10 @@ status := consensusService.Status()
 - ✅ Week 1: Consensus abstraction (COMPLETE)
 - ✅ Week 2: HotStuff types (COMPLETE)
 - ✅ Week 3: Leader election (COMPLETE)
-- ⏳ Week 4: Three-phase protocol (NEXT)
-- Week 5: View change
-- Week 6: Safety rules & integration
-- Week 7: Testing
-- Week 8: Documentation
+- ✅ Week 4: Three-phase protocol (COMPLETE)
+- ⏳ Week 5-6: Integration & testing (NEXT)
+- Week 7: Performance optimization
+- Week 8: Documentation & polish
 
 ## Summary of Progress
 
@@ -271,12 +298,21 @@ status := consensusService.Status()
 - Added comprehensive unit tests
 - **2 files, 592 lines**
 
+### Step 4: Three-Phase Protocol ✅
+- Implemented HotStuff service
+- Implemented PREPARE, PRE-COMMIT, COMMIT, DECIDE phases
+- Added vote collection and aggregation
+- Added view change mechanism
+- Added comprehensive unit tests
+- **4 files, 1252 lines**
+
 ### Total Progress
-- **12 files created**
-- **2286 lines of code**
-- **3 weeks of 8-week plan complete (37.5%)**
+- **16 files created**
+- **3538 lines of code**
+- **4 weeks of 8-week plan complete (50%)**
+- **Core HotStuff protocol complete!** 🎉
 
 ---
 
 **Last Updated**: 2025-10-14
-**Status**: Step 3 Complete, Ready for Step 4
+**Status**: Step 4 Complete, Core Protocol Implemented!
