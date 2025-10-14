@@ -1,6 +1,8 @@
 # HotStuff Implementation Progress
 
-## Status: Step 1 Complete ✅
+## Status: Step 2 Complete ✅
+
+### Completed: HotStuff Types and QC (Week 2)
 
 ### Completed: Consensus Abstraction Layer (Week 1)
 
@@ -108,23 +110,52 @@ prysm/beacon-chain/
 - [ ] Mode switching test
 - [ ] Configuration loading test
 
+#### Files Created (Step 2)
+
+1. **`prysm/beacon-chain/consensus/hotstuff/types.go`**
+   - Core HotStuff types: View, Phase, Vote, QC, Block
+   - BlockNode for block tree management
+   - BlockStatus progression tracking
+   - Message types: PrepareMsg, PreCommitMsg, CommitMsg, DecideMsg
+   - ViewChangeMsg for view change protocol
+
+2. **`prysm/beacon-chain/consensus/hotstuff/qc.go`**
+   - QCBuilder for collecting and aggregating votes
+   - VerifyQC for signature verification
+   - CompareQC and HighestQC for QC selection
+   - Signer bitmap creation and extraction
+   - BLS signature aggregation
+
+3. **`prysm/beacon-chain/consensus/hotstuff/qc_test.go`**
+   - QCBuilder tests (add vote, quorum, build)
+   - Signer bitmap tests
+   - QC comparison tests
+   - HighestQC selection tests
+
+4. **`prysm/beacon-chain/consensus/hotstuff/types_test.go`**
+   - Phase and BlockStatus string tests
+   - QC validation tests
+   - BlockNode status tests
+
+5. **`prysm/beacon-chain/consensus/hotstuff/README.md`**
+   - HotStuff package documentation
+   - Usage examples
+   - Protocol description
+
 ## Next Steps
 
-### Step 2: Implement HotStuff Types (Week 2)
+### Step 3: Implement Leader Election (Week 3)
 
 **Files to create:**
-- `prysm/beacon-chain/consensus/hotstuff/types.go`
-- `prysm/beacon-chain/consensus/hotstuff/qc.go`
+- `prysm/beacon-chain/consensus/hotstuff/leader.go`
+- `prysm/beacon-chain/consensus/hotstuff/leader_test.go`
 
 **Tasks:**
-1. Define HotStuff data structures:
-   - `View` - consensus round
-   - `QuorumCertificate` - 2f+1 signatures
-   - `HotStuffBlock` - block with QC
-   - `Vote` - validator vote
-2. Implement QC creation and verification
-3. Add serialization/deserialization
-4. Add unit tests
+1. Implement round-robin leader selection
+2. Implement stake-weighted leader selection
+3. Add leader verification
+4. Handle leader rotation on view change
+5. Add unit tests
 
 ### Step 3: Implement Leader Election (Week 3)
 
@@ -189,15 +220,34 @@ status := consensusService.Status()
 ## Timeline
 
 - ✅ Week 1: Consensus abstraction (COMPLETE)
-- ⏳ Week 2: HotStuff types (NEXT)
-- Week 3: Leader election
+- ✅ Week 2: HotStuff types (COMPLETE)
+- ⏳ Week 3: Leader election (NEXT)
 - Week 4: Three-phase protocol
 - Week 5: View change
 - Week 6: Safety rules & integration
 - Week 7: Testing
 - Week 8: Documentation
 
+## Summary of Progress
+
+### Step 1: Consensus Abstraction ✅
+- Created pluggable consensus interface
+- Implemented PoS wrapper
+- Added configuration system
+- **5 files, 641 lines**
+
+### Step 2: HotStuff Types ✅
+- Defined core HotStuff data structures
+- Implemented QC builder and verification
+- Added comprehensive unit tests
+- **5 files, 1053 lines**
+
+### Total Progress
+- **10 files created**
+- **1694 lines of code**
+- **2 weeks of 8-week plan complete (25%)**
+
 ---
 
 **Last Updated**: 2025-10-14
-**Status**: Step 1 Complete, Ready for Step 2
+**Status**: Step 2 Complete, Ready for Step 3
