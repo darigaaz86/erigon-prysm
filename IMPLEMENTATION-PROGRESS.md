@@ -1,6 +1,8 @@
 # HotStuff Implementation Progress
 
-## Status: Step 2 Complete ✅
+## Status: Step 3 Complete ✅
+
+### Completed: Leader Election (Week 3)
 
 ### Completed: HotStuff Types and QC (Week 2)
 
@@ -142,20 +144,40 @@ prysm/beacon-chain/
    - Usage examples
    - Protocol description
 
+#### Files Created (Step 3)
+
+1. **`prysm/beacon-chain/consensus/hotstuff/leader.go`** (280 lines)
+   - LeaderElection interface
+   - RoundRobinLeaderElection: Simple rotation
+   - StakeWeightedLeaderElection: Proportional to stake
+   - ViewChangeLeaderElection: Handles leader failures
+   - Binary search for efficient stake lookup
+   - Deterministic leader selection
+
+2. **`prysm/beacon-chain/consensus/hotstuff/leader_test.go`** (312 lines)
+   - Round-robin tests (rotation, wrapping, updates)
+   - Stake-weighted tests (distribution, high stake, equal stakes)
+   - View change tests (failure handling, clearing)
+   - Invalid input tests
+   - Factory tests
+
 ## Next Steps
 
-### Step 3: Implement Leader Election (Week 3)
+### Step 4: Implement Three-Phase Protocol (Week 4)
 
 **Files to create:**
-- `prysm/beacon-chain/consensus/hotstuff/leader.go`
-- `prysm/beacon-chain/consensus/hotstuff/leader_test.go`
+- `prysm/beacon-chain/consensus/hotstuff/phases.go`
+- `prysm/beacon-chain/consensus/hotstuff/voting.go`
+- `prysm/beacon-chain/consensus/hotstuff/phases_test.go`
 
 **Tasks:**
-1. Implement round-robin leader selection
-2. Implement stake-weighted leader selection
-3. Add leader verification
-4. Handle leader rotation on view change
-5. Add unit tests
+1. Implement PREPARE phase
+2. Implement PRE-COMMIT phase
+3. Implement COMMIT phase
+4. Implement DECIDE phase
+5. Add vote collection and aggregation
+6. Add timeout handling
+7. Add unit tests
 
 ### Step 3: Implement Leader Election (Week 3)
 
@@ -221,8 +243,8 @@ status := consensusService.Status()
 
 - ✅ Week 1: Consensus abstraction (COMPLETE)
 - ✅ Week 2: HotStuff types (COMPLETE)
-- ⏳ Week 3: Leader election (NEXT)
-- Week 4: Three-phase protocol
+- ✅ Week 3: Leader election (COMPLETE)
+- ⏳ Week 4: Three-phase protocol (NEXT)
 - Week 5: View change
 - Week 6: Safety rules & integration
 - Week 7: Testing
@@ -242,12 +264,19 @@ status := consensusService.Status()
 - Added comprehensive unit tests
 - **5 files, 1053 lines**
 
+### Step 3: Leader Election ✅
+- Implemented round-robin leader selection
+- Implemented stake-weighted leader selection
+- Added view change handling
+- Added comprehensive unit tests
+- **2 files, 592 lines**
+
 ### Total Progress
-- **10 files created**
-- **1694 lines of code**
-- **2 weeks of 8-week plan complete (25%)**
+- **12 files created**
+- **2286 lines of code**
+- **3 weeks of 8-week plan complete (37.5%)**
 
 ---
 
 **Last Updated**: 2025-10-14
-**Status**: Step 2 Complete, Ready for Step 3
+**Status**: Step 3 Complete, Ready for Step 4
