@@ -7,3 +7,6 @@
 [submodule "interfaces"]
 	path = node/interfaces
 	url = https://github.com/erigontech/interfaces
+[submodule "prysm"]
+	path = prysm
+	url = https://github.com/prysmaticlabs/prysm.git
