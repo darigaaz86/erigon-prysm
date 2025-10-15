@@ -9,4 +9,5 @@
 	url = https://github.com/erigontech/interfaces
 [submodule "prysm"]
 	path = prysm
-	url = https://github.com/prysmaticlabs/prysm.git
+	url = https://github.com/darigaaz86/prysm.git
+	branch = develop
