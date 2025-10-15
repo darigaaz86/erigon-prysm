@@ -1,0 +1,100 @@
+services:
+  erigon:
+    image: erigon-debug:local
+    container_name: erigon-private
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ ! -d /data/chaindata ]; then
+          erigon init --datadir=/data /genesis.json
+        fi
+        exec erigon --datadir=/data --networkid=32382 --http --http.addr=0.0.0.0 --http.port=8545 --http.api=eth,net,web3,debug,trace,txpool,erigon --http.vhosts=* --http.corsdomain=* --ws --externalcl --authrpc.addr=0.0.0.0 --authrpc.port=8551 --authrpc.vhosts=* --authrpc.jwtsecret=/jwt/jwt.hex --nodiscover --maxpeers=0 --log.console.verbosity=info
+    ports:
+      - "8545:8545"
+      - "8546:8546"
+      - "8551:8551"
+    volumes:
+      - erigon-data:/data
+      - ./jwt.hex:/jwt/jwt.hex:ro
+      - ./genesis/genesis.json:/genesis.json:ro
+    networks:
+      - private-chain
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  beacon-chain:
+    image: prysm-beacon-chain:local
+    container_name: prysm-beacon-chain
+    command:
+      - --datadir=/data
+      - --min-sync-peers=0
+      - --genesis-state=/genesis/genesis.ssz
+      - --interop-eth1data-votes
+      - --bootstrap-node=
+      - --chain-config-file=/config/config.yml
+      - --contract-deployment-block=0
+      - --chain-id=32382
+      - --accept-terms-of-use
+      - --execution-endpoint=http://erigon:8551
+      - --jwt-secret=/jwt/jwt.hex
+      - --suggested-fee-recipient=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+      - --minimum-peers-per-subnet=0
+      - --enable-debug-rpc-endpoints
+      - --rpc-host=0.0.0.0
+      - --grpc-gateway-host=0.0.0.0
+      - --verbosity=info
+      - --engine-endpoint-timeout-seconds=30
+    ports:
+      - "4000:4000"
+      - "3500:3500"
+      - "8080:8080"
+    volumes:
+      - consensus-data:/data
+      - ./jwt.hex:/jwt/jwt.hex:ro
+      - ./genesis:/genesis:ro
+      - ./config:/config:ro
+    networks:
+      - private-chain
+    depends_on:
+      - erigon
+    restart: unless-stopped
+
+  validator:
+    image: prysm-validator:local
+    container_name: prysm-validator
+    command:
+      - --datadir=/data
+      - --accept-terms-of-use
+      - --interop-num-validators=64
+      - --interop-start-index=0
+      - --chain-config-file=/config/config.yml
+      - --force-clear-db
+      - --beacon-rpc-provider=beacon-chain:4000
+      - --suggested-fee-recipient=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+      - --verbosity=info
+    volumes:
+      - validator-data:/data
+      - ./config:/config:ro
+    networks:
+      - private-chain
+    depends_on:
+      - beacon-chain
+    restart: unless-stopped
+
+networks:
+  private-chain:
+    driver: bridge
+
+volumes:
+  erigon-data:
+    driver: local
+  consensus-data:
+    driver: local
+  validator-data:
+    driver: local
