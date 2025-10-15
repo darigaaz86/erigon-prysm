@@ -42,6 +42,7 @@ services:
       - --rpc-host=0.0.0.0
       - --grpc-gateway-host=0.0.0.0
       - --verbosity=info
+      - --engine-endpoint-timeout-seconds=30
     ports:
       - "4000:4000"
       - "3500:3500"
