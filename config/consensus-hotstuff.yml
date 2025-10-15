@@ -1,0 +1,40 @@
+# HotStuff BFT Consensus Configuration
+
+# Mode: "pos" for Ethereum PoS, "hotstuff" for HotStuff BFT
+mode: "hotstuff"
+
+# HotStuff Configuration
+hotstuff:
+  # Timeout before triggering view change (default: 10s)
+  # If no block is produced within this time, a new leader is elected
+  view_timeout: 10s
+  
+  # Target time between blocks (default: 6s)
+  # HotStuff can produce blocks faster than PoS
+  block_time: 6s
+  
+  # Minimum number of validators required (default: 4)
+  # For BFT: n = 3f + 1, where f is max Byzantine faults
+  # 4 validators = tolerates 1 Byzantine fault
+  min_validators: 4
+  
+  # Quorum threshold (default: 0.67)
+  # Fraction of validators needed for quorum (2f+1 out of 3f+1)
+  # 0.67 = 67% = 2/3 supermajority
+  quorum_threshold: 0.67
+  
+  # Leader rotation strategy (default: "round-robin")
+  # Options:
+  #   - "round-robin": Simple rotation, each validator takes turns
+  #   - "stake-weighted": Leaders selected proportional to stake
+  leader_rotation: "round-robin"
+  
+  # Enable view change mechanism (default: true)
+  # Allows automatic leader change on timeout or failure
+  enable_view_change: true
+
+# HotStuff provides:
+# - Linear communication complexity: O(n) messages per view
+# - Fast finality: 3 phases (~18s) vs 2 epochs (~13 min)
+# - Byzantine fault tolerance: tolerates f < n/3 failures
+# - Deterministic leader selection

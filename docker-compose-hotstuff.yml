@@ -50,6 +50,8 @@ services:
       - --grpc-gateway-host=0.0.0.0
       - --verbosity=info
       - --engine-endpoint-timeout-seconds=30
+      - --consensus-mode=hotstuff
+      - --consensus-config=/config/consensus-hotstuff.yml
     ports:
       - "4000:4000"
       - "3500:3500"
