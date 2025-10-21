@@ -1,0 +1,232 @@
+---
+- name: Setup Blockchain Node
+  hosts: blockchain_nodes
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Remove old Docker packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - containerd
+          - runc
+        state: absent
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - git
+          - curl
+          - build-essential
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Configure git to use HTTPS
+      become_user: ubuntu
+      shell: |
+        git config --global url."https://github.com/".insteadOf git@github.com:
+        git config --global url."https://".insteadOf git://
+      args:
+        executable: /bin/bash
+
+    - name: Clone main repository
+      become_user: ubuntu
+      shell: |
+        rm -rf /home/ubuntu/erigon
+        git clone {{ repo_url }} /home/ubuntu/erigon
+        cd /home/ubuntu/erigon
+        git checkout main
+      args:
+        executable: /bin/bash
+      environment:
+        GIT_TERMINAL_PROMPT: '0'
+
+    - name: Clone prysm submodule
+      become_user: ubuntu
+      shell: |
+        rm -rf /home/ubuntu/erigon/prysm
+        git clone {{ prysm_repo_url }} /home/ubuntu/erigon/prysm
+        cd /home/ubuntu/erigon/prysm
+        git checkout develop
+      args:
+        executable: /bin/bash
+      environment:
+        GIT_TERMINAL_PROMPT: '0'
+
+    - name: Copy genesis files
+      become_user: ubuntu
+      copy:
+        src: "{{ item }}"
+        dest: /home/ubuntu/erigon/genesis/
+      with_fileglob:
+        - ../../genesis/*.json
+        - ../../genesis/*.ssz
+
+    - name: Copy config files
+      become_user: ubuntu
+      copy:
+        src: ../../config/
+        dest: /home/ubuntu/erigon/config/
+
+    - name: Copy docker-compose.yml
+      become_user: ubuntu
+      copy:
+        src: ../../docker-compose.yml
+        dest: /home/ubuntu/erigon/docker-compose.yml
+
+    - name: Copy jwt.hex
+      become_user: ubuntu
+      copy:
+        src: ../../jwt.hex
+        dest: /home/ubuntu/erigon/jwt.hex
+
+    - name: Build Erigon Docker image
+      become_user: ubuntu
+      shell: |
+        cd /home/ubuntu/erigon
+        docker build --build-arg BINARIES="erigon rpcdaemon" -t erigon-debug:local .
+      args:
+        executable: /bin/bash
+
+    - name: Copy Prysm build script
+      become_user: ubuntu
+      copy:
+        src: ../../build-prysm-docker.sh
+        dest: /home/ubuntu/erigon/build-prysm-docker.sh
+        mode: '0755'
+
+    - name: Build Prysm Docker images
+      become_user: ubuntu
+      shell: |
+        cd /home/ubuntu/erigon
+        ./build-prysm-docker.sh
+      args:
+        executable: /bin/bash
+
+    - name: Start Docker Compose services
+      become_user: ubuntu
+      shell: |
+        cd /home/ubuntu/erigon
+        docker-compose up -d
+      args:
+        executable: /bin/bash
+
+    - name: Wait for services to be ready
+      wait_for:
+        port: 8545
+        delay: 10
+        timeout: 300
+
+- name: Setup TPS Tester
+  hosts: tps_testers
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Node.js and npm
+      apt:
+        name:
+          - nodejs
+          - npm
+          - git
+        state: present
+
+    - name: Install n (Node version manager)
+      npm:
+        name: n
+        global: yes
+
+    - name: Install Node.js 18
+      shell: n 18
+
+    - name: Configure git to use HTTPS
+      become_user: ubuntu
+      shell: |
+        git config --global url."https://github.com/".insteadOf git@github.com:
+        git config --global url."https://".insteadOf git://
+      args:
+        executable: /bin/bash
+
+    - name: Clone main repository
+      become_user: ubuntu
+      shell: |
+        rm -rf /home/ubuntu/erigon
+        git clone {{ repo_url }} /home/ubuntu/erigon
+        cd /home/ubuntu/erigon
+        git checkout main
+      args:
+        executable: /bin/bash
+      environment:
+        GIT_TERMINAL_PROMPT: '0'
+
+    - name: Clone prysm submodule
+      become_user: ubuntu
+      shell: |
+        rm -rf /home/ubuntu/erigon/prysm
+        git clone {{ prysm_repo_url }} /home/ubuntu/erigon/prysm
+        cd /home/ubuntu/erigon/prysm
+        git checkout develop
+      args:
+        executable: /bin/bash
+      environment:
+        GIT_TERMINAL_PROMPT: '0'
+
+    - name: Install npm dependencies
+      become_user: ubuntu
+      shell: |
+        cd /home/ubuntu/erigon
+        npm install
+      args:
+        executable: /bin/bash
+
+    - name: Create test script
+      become_user: ubuntu
+      copy:
+        dest: /home/ubuntu/run-tps-test.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          cd /home/ubuntu/erigon
+          export RPC_URL="{{ blockchain_rpc_url }}"
+          node scripts/stress-500tps-controlled.js

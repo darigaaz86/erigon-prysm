@@ -110,4 +110,6 @@ mdbx.lck
 /*/**/LOCK
 /*/**/nodekey
 
-.my
+.mydeployment/terraform/.terraform/
+deployment/terraform/terraform.tfstate*
+deployment/terraform/terraform.tfstate*
