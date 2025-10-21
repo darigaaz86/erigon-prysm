@@ -168,8 +168,23 @@
       apt:
         name:
           - git
-          - golang-go
+          - wget
         state: present
+
+    - name: Download and install Go 1.23
+      shell: |
+        wget -q https://go.dev/dl/go1.23.2.linux-amd64.tar.gz
+        rm -rf /usr/local/go
+        tar -C /usr/local -xzf go1.23.2.linux-amd64.tar.gz
+        rm go1.23.2.linux-amd64.tar.gz
+      args:
+        creates: /usr/local/go/bin/go
+
+    - name: Add Go to PATH
+      lineinfile:
+        path: /etc/environment
+        regexp: '^PATH='
+        line: 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/local/go/bin"'
 
     - name: Configure git to use HTTPS
       become_user: ubuntu
@@ -207,9 +222,11 @@
       become_user: ubuntu
       shell: |
         cd /home/ubuntu/erigon
-        go build -o stress-test ./cmd/stress-test
+        /usr/local/go/bin/go build -o stress-test ./cmd/stress-test
       args:
         executable: /bin/bash
+      environment:
+        PATH: "/usr/local/go/bin:{{ ansible_env.PATH }}"
 
     - name: Create test script
       become_user: ubuntu
