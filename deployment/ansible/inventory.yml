@@ -3,14 +3,14 @@ all:
     blockchain_nodes:
       hosts:
         node:
-          ansible_host: 13.229.127.122
+          ansible_host: 3.0.59.187
           ansible_user: ubuntu
           ansible_ssh_private_key_file: ~/.ssh/id_rsa
     
     tps_testers:
       hosts:
         tester:
-          ansible_host: 18.143.197.243
+          ansible_host: 18.142.162.241
           ansible_user: ubuntu
           ansible_ssh_private_key_file: ~/.ssh/id_rsa
-          blockchain_rpc_url: http://13.229.127.122:8545
+          blockchain_rpc_url: http://3.0.59.187:8545

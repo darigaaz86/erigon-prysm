@@ -13,7 +13,7 @@ provider "aws" {
 
 # Security Group
 resource "aws_security_group" "blockchain_sg" {
-  name        = "blockchain-node-sg"
+  name_prefix = "blockchain-node-sg"
   description = "Security group for blockchain nodes"
 
   ingress {
@@ -65,8 +65,12 @@ resource "aws_security_group" "blockchain_sg" {
 
 # Key Pair
 resource "aws_key_pair" "blockchain_key" {
-  key_name   = "blockchain-key"
+  key_name   = "blockchain-key-${formatdate("YYYYMMDDhhmmss", timestamp())}"
   public_key = file(var.public_key_path)
+
+  lifecycle {
+    ignore_changes = [key_name]
+  }
 }
 
 # Blockchain Node EC2
