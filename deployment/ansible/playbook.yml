@@ -164,21 +164,12 @@
       apt:
         update_cache: yes
 
-    - name: Install Node.js and npm
+    - name: Install prerequisites
       apt:
         name:
-          - nodejs
-          - npm
           - git
+          - golang-go
         state: present
-
-    - name: Install n (Node version manager)
-      npm:
-        name: n
-        global: yes
-
-    - name: Install Node.js 18
-      shell: n 18
 
     - name: Configure git to use HTTPS
       become_user: ubuntu
@@ -212,11 +203,11 @@
       environment:
         GIT_TERMINAL_PROMPT: '0'
 
-    - name: Install npm dependencies
+    - name: Build stress test tool
       become_user: ubuntu
       shell: |
         cd /home/ubuntu/erigon
-        npm install
+        go build -o stress-test ./cmd/stress-test
       args:
         executable: /bin/bash
 
@@ -228,5 +219,4 @@
         content: |
           #!/bin/bash
           cd /home/ubuntu/erigon
-          export RPC_URL="{{ blockchain_rpc_url }}"
-          node scripts/stress-500tps-controlled.js
+          ./stress-test -rpc="{{ blockchain_rpc_url }}" -tps=500 -duration=30 -workers=20
