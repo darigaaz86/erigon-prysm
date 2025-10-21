@@ -221,8 +221,9 @@
     - name: Build stress test tool
       become_user: ubuntu
       shell: |
-        cd /home/ubuntu/erigon
-        /usr/local/go/bin/go build -o stress-test ./cmd/stress-test
+        cd /home/ubuntu/erigon/cmd/stress-test
+        /usr/local/go/bin/go mod download
+        /usr/local/go/bin/go build -o ../../stress-test .
       args:
         executable: /bin/bash
       environment:
