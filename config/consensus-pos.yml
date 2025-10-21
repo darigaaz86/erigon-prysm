@@ -1,0 +1,19 @@
+# Ethereum Proof of Stake Consensus Configuration
+
+consensus:
+  # Mode: "pos" for Ethereum PoS, "hotstuff" for HotStuff BFT
+  mode: "pos"
+  
+  # Ethereum PoS Configuration
+  pos:
+    # Duration of each slot (default: 12 seconds)
+    slot_duration: 12s
+    
+    # Number of slots per epoch (default: 32)
+    slots_per_epoch: 32
+    
+    # Number of epochs per sync committee period (default: 256)
+    epochs_per_sync_committee: 256
+
+# This configuration uses the existing Ethereum PoS consensus
+# with Prysm's blockchain service and LMD-GHOST fork choice.

@@ -1,0 +1,31 @@
+# HotStuff Development Configuration
+# Fast blocks for local development and testing
+
+consensus:
+  mode: "hotstuff"
+  
+  hotstuff:
+    # Shorter timeout for faster development
+    view_timeout: 5s
+    
+    # 6 second blocks
+    block_time: 6s
+    
+    # Single validator for solo development
+    min_validators: 1
+    
+    # Standard quorum threshold
+    quorum_threshold: 0.67
+    
+    # Round-robin is simpler for testing
+    leader_rotation: "round-robin"
+    
+    # Disable view change for single node
+    # (no need for leader change with one validator)
+    enable_view_change: false
+
+# This configuration is optimized for:
+# - Local development
+# - Fast iteration
+# - Single-node testing
+# - Quick feedback loops

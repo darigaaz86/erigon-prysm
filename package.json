@@ -1,0 +1,16 @@
+{
+  "name": "erc20-deployment",
+  "version": "1.0.0",
+  "description": "Deploy and test ERC20 token",
+  "scripts": {
+    "deploy": "node scripts/deploy-and-transfer.js",
+    "test:throughput": "node scripts/throughput-test.js",
+    "test:extreme": "node scripts/extreme-throughput-test.js",
+    "test:optimized": "node scripts/optimized-throughput-test.js",
+    "test:native": "node scripts/native-transfer-test.js"
+  },
+  "dependencies": {
+    "ethers": "^6.9.0",
+    "solc": "^0.8.21"
+  }
+}

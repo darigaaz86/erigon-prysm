@@ -1,0 +1,47 @@
+# HotStuff BFT Consensus Configuration - Optimized for 10K TPS
+
+# Mode: "pos" for Ethereum PoS, "hotstuff" for HotStuff BFT
+mode: "hotstuff"
+
+# HotStuff Configuration - High Throughput Settings
+hotstuff:
+  # Timeout before triggering view change (reduced for faster recovery)
+  # Aggressive timeout for high-throughput scenarios
+  view_timeout: 3s
+  
+  # Target time between blocks - CRITICAL FOR TPS
+  # Setting to 1s for stability
+  # With 1600 tx/block: 1600 TPS
+  # With 5000 tx/block (100M gas): 5000 TPS
+  block_time: 1s
+  
+  # Minimum number of validators required (default: 4)
+  # For BFT: n = 3f + 1, where f is max Byzantine faults
+  # 4 validators = tolerates 1 Byzantine fault
+  min_validators: 4
+  
+  # Quorum threshold (default: 0.67)
+  # Fraction of validators needed for quorum (2f+1 out of 3f+1)
+  # 0.67 = 67% = 2/3 supermajority
+  quorum_threshold: 0.67
+  
+  # Leader rotation strategy
+  # round-robin is faster than stake-weighted for high throughput
+  leader_rotation: "round-robin"
+  
+  # Enable view change mechanism
+  # Keep enabled for fault tolerance
+  enable_view_change: true
+
+# Performance Notes:
+# - 0.5s block time with 1600 tx/block = 3,200 TPS
+# - To reach 10K TPS:
+#   Option 1: Reduce block_time to 0.16s (aggressive)
+#   Option 2: Increase gas limit to fit 5000 tx/block
+#   Option 3: Combination of both
+#
+# Network Requirements:
+# - Low latency between validators (<50ms recommended)
+# - High bandwidth for block propagation
+# - Fast block execution (SSD storage recommended)
+

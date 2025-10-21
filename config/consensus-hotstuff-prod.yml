@@ -1,0 +1,33 @@
+# HotStuff Production Configuration
+# Optimized for multi-validator production deployment
+
+consensus:
+  mode: "hotstuff"
+  
+  hotstuff:
+    # Longer timeout for network stability
+    view_timeout: 15s
+    
+    # Standard block time
+    block_time: 12s
+    
+    # Minimum 10 validators for production
+    # Tolerates 3 Byzantine faults (f = 3, n = 10)
+    min_validators: 10
+    
+    # Standard 2/3 supermajority
+    quorum_threshold: 0.67
+    
+    # Stake-weighted for economic security
+    # Validators with more stake have more leadership opportunities
+    leader_rotation: "stake-weighted"
+    
+    # Enable view change for fault tolerance
+    enable_view_change: true
+
+# This configuration is optimized for:
+# - Production deployment
+# - Multiple validators
+# - Network stability
+# - Economic security
+# - Byzantine fault tolerance
