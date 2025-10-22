@@ -130,9 +130,13 @@ func main() {
 		}
 		fmt.Println("All sender accounts funded successfully!\n")
 
-		// Wait for transactions to be mined
-		fmt.Println("Waiting 60 seconds for funding transactions to be mined...")
-		time.Sleep(60 * time.Second)
+		// Wait for transactions to be mined by checking balances
+		fmt.Println("Waiting for funding transactions to be mined (checking balances)...")
+		err = waitForFunding(ctx, client, senderAccounts)
+		if err != nil {
+			log.Fatalf("Failed to verify funding: %v", err)
+		}
+		fmt.Println("All accounts verified and funded!\n")
 
 		// Update nonces for sender accounts
 		for _, acc := range senderAccounts {
@@ -350,4 +354,43 @@ func runStressTest(ctx context.Context, client *ethclient.Client, senders []*Acc
 	fmt.Fprintf(file, "# Deviation: %.2f%%\n", deviation)
 
 	return nil
+}
+
+func waitForFunding(ctx context.Context, client *ethclient.Client, accounts []*Account) error {
+	minBalance := new(big.Int).Mul(big.NewInt(1), big.NewInt(1e18)) // At least 1 ETH
+	maxWait := 120 * time.Second
+	checkInterval := 3 * time.Second
+	startTime := time.Now()
+
+	for {
+		allFunded := true
+		fundedCount := 0
+
+		for _, acc := range accounts {
+			balance, err := client.BalanceAt(ctx, acc.Address, nil)
+			if err != nil {
+				log.Printf("Warning: Failed to check balance for %s: %v", acc.Address.Hex(), err)
+				allFunded = false
+				continue
+			}
+
+			if balance.Cmp(minBalance) >= 0 {
+				fundedCount++
+			} else {
+				allFunded = false
+			}
+		}
+
+		fmt.Printf("  Verified %d/%d accounts funded\n", fundedCount, len(accounts))
+
+		if allFunded {
+			return nil
+		}
+
+		if time.Since(startTime) > maxWait {
+			return fmt.Errorf("timeout waiting for accounts to be funded (only %d/%d funded after %v)", fundedCount, len(accounts), maxWait)
+		}
+
+		time.Sleep(checkInterval)
+	}
 }
