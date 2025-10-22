@@ -19,21 +19,37 @@ import (
 )
 
 var (
-	rpcURL     = flag.String("rpc", getEnv("RPC_URL", "http://localhost:8545"), "RPC endpoint URL")
-	privateKey = flag.String("key", "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", "Private key (without 0x)")
-	recipient  = flag.String("to", "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", "Recipient address")
-	targetTPS  = flag.Int("tps", 500, "Target transactions per second")
-	duration   = flag.Int("duration", 30, "Test duration in seconds")
-	workers    = flag.Int("workers", 10, "Number of concurrent workers")
-	chainID    = flag.Int64("chainid", 32382, "Chain ID")
-	gasPrice   = flag.Int64("gasprice", 1000000000, "Gas price in wei (1 gwei default)")
-	outputFile = flag.String("output", "tx_hashes.txt", "Output file for transaction hashes")
+	rpcURL        = flag.String("rpc", getEnv("RPC_URL", "http://localhost:8545"), "RPC endpoint URL")
+	privateKey    = flag.String("key", "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", "Private key (without 0x)")
+	targetTPS     = flag.Int("tps", 500, "Target transactions per second")
+	duration      = flag.Int("duration", 30, "Test duration in seconds")
+	numSenders    = flag.Int("senders", 20, "Number of sender addresses to use")
+	numRecipients = flag.Int("recipients", 100, "Number of recipient addresses")
+	chainID       = flag.Int64("chainid", 32382, "Chain ID")
+	gasPrice      = flag.Int64("gasprice", 1000000000, "Gas price in wei (1 gwei default)")
+	outputFile    = flag.String("output", "tx_hashes.txt", "Output file for transaction hashes")
+	skipSetup     = flag.Bool("skip-setup", false, "Skip the setup phase (addresses already funded)")
 )
 
 type Stats struct {
 	sent   uint64
 	errors uint64
 	start  time.Time
+}
+
+type Account struct {
+	PrivateKey *ecdsa.PrivateKey
+	Address    common.Address
+	Nonce      uint64
+	mu         sync.Mutex
+}
+
+func (a *Account) GetAndIncrementNonce() uint64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	nonce := a.Nonce
+	a.Nonce++
+	return nonce
 }
 
 func getEnv(key, defaultValue string) string {
@@ -43,14 +59,34 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+func generateAccounts(count int) []*Account {
+	accounts := make([]*Account, count)
+	for i := 0; i < count; i++ {
+		key, err := crypto.GenerateKey()
+		if err != nil {
+			log.Fatalf("Failed to generate key: %v", err)
+		}
+		publicKey := key.Public()
+		publicKeyECDSA, _ := publicKey.(*ecdsa.PublicKey)
+		address := crypto.PubkeyToAddress(*publicKeyECDSA)
+		accounts[i] = &Account{
+			PrivateKey: key,
+			Address:    address,
+			Nonce:      0,
+		}
+	}
+	return accounts
+}
+
 func main() {
 	flag.Parse()
 
-	fmt.Println("=== HIGH-PERFORMANCE STRESS TEST ===")
+	fmt.Println("=== MULTI-ADDRESS STRESS TEST ===")
 	fmt.Printf("RPC URL: %s\n", *rpcURL)
 	fmt.Printf("Target TPS: %d\n", *targetTPS)
 	fmt.Printf("Duration: %d seconds\n", *duration)
-	fmt.Printf("Workers: %d\n", *workers)
+	fmt.Printf("Sender Addresses: %d\n", *numSenders)
+	fmt.Printf("Recipient Addresses: %d\n", *numRecipients)
 	fmt.Printf("Total Transactions: %d\n", *targetTPS**duration)
 	fmt.Printf("Chain ID: %d\n", *chainID)
 	fmt.Println()
@@ -62,43 +98,123 @@ func main() {
 	}
 	defer client.Close()
 
-	// Load private key
-	key, err := crypto.HexToECDSA(*privateKey)
+	ctx := context.Background()
+
+	// Load genesis private key
+	genesisKey, err := crypto.HexToECDSA(*privateKey)
 	if err != nil {
 		log.Fatalf("Failed to load private key: %v", err)
 	}
 
-	publicKey := key.Public()
+	publicKey := genesisKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
 		log.Fatal("Failed to cast public key to ECDSA")
 	}
 
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	toAddress := common.HexToAddress(*recipient)
+	genesisAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	fmt.Printf("Genesis Address: %s\n\n", genesisAddress.Hex())
 
-	fmt.Printf("From: %s\n", fromAddress.Hex())
-	fmt.Printf("To: %s\n", toAddress.Hex())
-	fmt.Println()
+	// Generate sender and recipient accounts
+	fmt.Println("Generating accounts...")
+	senderAccounts := generateAccounts(*numSenders)
+	recipientAccounts := generateAccounts(*numRecipients)
+	fmt.Printf("Generated %d sender accounts and %d recipient accounts\n\n", *numSenders, *numRecipients)
 
-	// Get starting nonce
-	ctx := context.Background()
-	nonce, err := client.PendingNonceAt(ctx, fromAddress)
-	if err != nil {
-		log.Fatalf("Failed to get nonce: %v", err)
+	// Setup phase: Fund sender accounts
+	if !*skipSetup {
+		fmt.Println("=== SETUP PHASE: Funding Sender Accounts ===")
+		err = fundAccounts(ctx, client, genesisKey, genesisAddress, senderAccounts)
+		if err != nil {
+			log.Fatalf("Failed to fund accounts: %v", err)
+		}
+		fmt.Println("All sender accounts funded successfully!\n")
+
+		// Wait for transactions to be mined
+		fmt.Println("Waiting 30 seconds for funding transactions to be mined...")
+		time.Sleep(30 * time.Second)
+
+		// Update nonces for sender accounts
+		for _, acc := range senderAccounts {
+			nonce, err := client.PendingNonceAt(ctx, acc.Address)
+			if err != nil {
+				log.Printf("Warning: Failed to get nonce for %s: %v", acc.Address.Hex(), err)
+			} else {
+				acc.Nonce = nonce
+			}
+		}
+	} else {
+		fmt.Println("Skipping setup phase (--skip-setup flag set)\n")
+		// Get current nonces
+		for _, acc := range senderAccounts {
+			nonce, err := client.PendingNonceAt(ctx, acc.Address)
+			if err != nil {
+				log.Printf("Warning: Failed to get nonce for %s: %v", acc.Address.Hex(), err)
+			} else {
+				acc.Nonce = nonce
+			}
+		}
 	}
-	fmt.Printf("Starting nonce: %d\n\n", nonce)
 
+	// Test phase: Send transactions from multiple senders to multiple recipients
+	fmt.Println("=== TEST PHASE: Multi-Address Transaction Test ===")
+	err = runStressTest(ctx, client, senderAccounts, recipientAccounts)
+	if err != nil {
+		log.Fatalf("Stress test failed: %v", err)
+	}
+}
+
+func fundAccounts(ctx context.Context, client *ethclient.Client, genesisKey *ecdsa.PrivateKey, genesisAddress common.Address, accounts []*Account) error {
+	nonce, err := client.PendingNonceAt(ctx, genesisAddress)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %v", err)
+	}
+
+	// Fund each account with 100 ETH
+	fundAmount := new(big.Int).Mul(big.NewInt(100), big.NewInt(1e18))
+
+	fmt.Printf("Funding %d accounts with 100 ETH each...\n", len(accounts))
+
+	for i, acc := range accounts {
+		tx := types.NewTransaction(
+			nonce,
+			acc.Address,
+			fundAmount,
+			21000,
+			big.NewInt(*gasPrice),
+			nil,
+		)
+
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(*chainID)), genesisKey)
+		if err != nil {
+			return fmt.Errorf("failed to sign funding tx: %v", err)
+		}
+
+		err = client.SendTransaction(ctx, signedTx)
+		if err != nil {
+			return fmt.Errorf("failed to send funding tx: %v", err)
+		}
+
+		nonce++
+		if (i+1)%10 == 0 || i == len(accounts)-1 {
+			fmt.Printf("  Funded %d/%d accounts\n", i+1, len(accounts))
+		}
+	}
+
+	return nil
+}
+
+func runStressTest(ctx context.Context, client *ethclient.Client, senders []*Account, recipients []*Account) error {
 	// Open output file
 	file, err := os.Create(*outputFile)
 	if err != nil {
-		log.Fatalf("Failed to create output file: %v", err)
+		return fmt.Errorf("failed to create output file: %v", err)
 	}
 	defer file.Close()
 
-	fmt.Fprintf(file, "# Stress Test - %s\n", time.Now().Format(time.RFC3339))
-	fmt.Fprintf(file, "# From: %s\n", fromAddress.Hex())
-	fmt.Fprintf(file, "# To: %s\n", toAddress.Hex())
+	fmt.Fprintf(file, "# Multi-Address Stress Test - %s\n", time.Now().Format(time.RFC3339))
+	fmt.Fprintf(file, "# Senders: %d\n", len(senders))
+	fmt.Fprintf(file, "# Recipients: %d\n", len(recipients))
 	fmt.Fprintf(file, "# Target TPS: %d\n", *targetTPS)
 	fmt.Fprintf(file, "# Duration: %d seconds\n\n", *duration)
 
@@ -106,35 +222,40 @@ func main() {
 	stats := &Stats{start: time.Now()}
 	var fileMutex sync.Mutex
 
-	// Calculate transactions per worker
 	totalTxs := *targetTPS * *duration
-	txsPerWorker := totalTxs / *workers
+	txsPerSender := totalTxs / len(senders)
 
-	// Start workers
+	// Start workers (one per sender)
 	var wg sync.WaitGroup
 	startTime := time.Now()
 
-	fmt.Println("Starting transaction submission...")
+	fmt.Printf("Starting transaction submission with %d senders...\n", len(senders))
 
-	for w := 0; w < *workers; w++ {
+	for senderIdx, sender := range senders {
 		wg.Add(1)
-		go func(workerID int, startNonce uint64) {
+		go func(senderID int, senderAcc *Account) {
 			defer wg.Done()
 
-			currentNonce := startNonce
 			sent := 0
-			targetPerWorker := txsPerWorker
+			targetForSender := txsPerSender
 
-			// Calculate delay between transactions for this worker
-			delayNs := time.Duration(float64(time.Second) / float64(*targetTPS / *workers))
+			// Calculate delay between transactions for this sender
+			delayNs := time.Duration(float64(time.Second) / float64(*targetTPS/len(senders)))
 
-			for sent < targetPerWorker {
+			for sent < targetForSender {
 				txStart := time.Now()
+
+				// Pick a random recipient
+				recipientIdx := (senderID + sent) % len(recipients)
+				recipient := recipients[recipientIdx]
+
+				// Get nonce
+				nonce := senderAcc.GetAndIncrementNonce()
 
 				// Create transaction
 				tx := types.NewTransaction(
-					currentNonce,
-					toAddress,
+					nonce,
+					recipient.Address,
 					big.NewInt(1000000000000000), // 0.001 ETH
 					21000,
 					big.NewInt(*gasPrice),
@@ -142,11 +263,9 @@ func main() {
 				)
 
 				// Sign transaction
-				signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(*chainID)), key)
+				signedTx, err := types.SignTx(tx, types.NewEIP155Signer(big.NewInt(*chainID)), senderAcc.PrivateKey)
 				if err != nil {
 					atomic.AddUint64(&stats.errors, 1)
-					log.Printf("Worker %d: Failed to sign tx: %v", workerID, err)
-					currentNonce++
 					sent++
 					continue
 				}
@@ -156,7 +275,7 @@ func main() {
 				if err != nil {
 					atomic.AddUint64(&stats.errors, 1)
 					if atomic.LoadUint64(&stats.errors) <= 10 {
-						log.Printf("Worker %d: Failed to send tx: %v", workerID, err)
+						log.Printf("Sender %d: Failed to send tx: %v", senderID, err)
 					}
 				} else {
 					atomic.AddUint64(&stats.sent, 1)
@@ -167,7 +286,6 @@ func main() {
 					fileMutex.Unlock()
 				}
 
-				currentNonce++
 				sent++
 
 				// Rate limiting
@@ -176,7 +294,7 @@ func main() {
 					time.Sleep(delayNs - elapsed)
 				}
 			}
-		}(w, nonce+uint64(w*txsPerWorker))
+		}(senderIdx, sender)
 	}
 
 	// Progress reporter
@@ -230,4 +348,6 @@ func main() {
 	fmt.Fprintf(file, "# Target TPS: %d\n", *targetTPS)
 	fmt.Fprintf(file, "# Actual TPS: %.2f\n", actualTPS)
 	fmt.Fprintf(file, "# Deviation: %.2f%%\n", deviation)
+
+	return nil
 }
