@@ -174,10 +174,10 @@ func fundAccounts(ctx context.Context, client *ethclient.Client, genesisKey *ecd
 		return fmt.Errorf("failed to get nonce: %v", err)
 	}
 
-	// Fund each account with 100 ETH
-	fundAmount := new(big.Int).Mul(big.NewInt(100), big.NewInt(1e18))
+	// Fund each account with 10000 ETH
+	fundAmount := new(big.Int).Mul(big.NewInt(10000), big.NewInt(1e18))
 
-	fmt.Printf("Funding %d accounts with 100 ETH each...\n", len(accounts))
+	fmt.Printf("Funding %d accounts with 10000 ETH each...\n", len(accounts))
 
 	for i, acc := range accounts {
 		tx := types.NewTransaction(
@@ -260,7 +260,7 @@ func runStressTest(ctx context.Context, client *ethclient.Client, senders []*Acc
 				tx := types.NewTransaction(
 					nonce,
 					recipient.Address,
-					big.NewInt(1000000000000000), // 0.001 ETH
+					big.NewInt(1000000000000), // 0.0001 ETH
 					21000,
 					big.NewInt(*gasPrice),
 					nil,
