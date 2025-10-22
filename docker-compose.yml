@@ -24,11 +24,14 @@ services:
           --authrpc.addr=0.0.0.0 --authrpc.port=8551 \
           --authrpc.vhosts=* --authrpc.jwtsecret=/jwt/jwt.hex \
           --nodiscover --maxpeers=5 \
-          --txpool.globalslots=100000 \
-          --txpool.globalqueue=100000 \
-          --txpool.accountslots=256 \
+          --txpool.globalslots=200000 \
+          --txpool.globalqueue=200000 \
+          --txpool.accountslots=512 \
+          --txpool.accountqueue=256 \
           --txpool.pricebump=1 \
           --txpool.pricelimit=1 \
+          --txpool.nolocals \
+          --txpool.lifetime=3h \
           --db.pagesize=16k \
           --batchSize=512M \
           --prune.mode=full \
@@ -51,11 +54,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '6'
-          memory: 12G
+          cpus: '7'
+          memory: 16G
         reservations:
-          cpus: '4'
-          memory: 8G
+          cpus: '5'
+          memory: 12G
     ulimits:
       nofile:
         soft: 65536
@@ -86,6 +89,8 @@ services:
       - --consensus-mode=hotstuff
       - --consensus-config=/config/consensus-hotstuff.yml
       - --grpc-max-msg-size=104857600
+      - --block-batch-limit=512
+      - --block-batch-limit-burst-factor=10
     ports:
       - "4000:4000"
       - "3500:3500"
