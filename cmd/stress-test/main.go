@@ -131,8 +131,8 @@ func main() {
 		fmt.Println("All sender accounts funded successfully!\n")
 
 		// Wait for transactions to be mined
-		fmt.Println("Waiting 30 seconds for funding transactions to be mined...")
-		time.Sleep(30 * time.Second)
+		fmt.Println("Waiting 60 seconds for funding transactions to be mined...")
+		time.Sleep(60 * time.Second)
 
 		// Update nonces for sender accounts
 		for _, acc := range senderAccounts {
