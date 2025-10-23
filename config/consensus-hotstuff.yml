@@ -7,11 +7,11 @@ mode: "hotstuff"
 hotstuff:
   # Timeout before triggering view change (default: 10s)
   # If no block is produced within this time, a new leader is elected
-  view_timeout: 10s
+  view_timeout: 6s
   
   # Target time between blocks (default: 6s)
   # HotStuff can produce blocks faster than PoS
-  block_time: 6s
+  block_time: 3s
   
   # Minimum number of validators required (default: 4)
   # For BFT: n = 3f + 1, where f is max Byzantine faults
