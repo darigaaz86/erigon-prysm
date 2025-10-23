@@ -48,11 +48,11 @@ ENTRYPOINT ["/usr/local/bin/validator"]
 EOF
 
 echo "📦 Building beacon-chain image..."
-docker build --target beacon-chain -t prysm-beacon-chain:local -f Dockerfile.prysm-builder .
+docker build --no-cache --target beacon-chain -t prysm-beacon-chain:local -f Dockerfile.prysm-builder .
 
 echo ""
 echo "📦 Building validator image..."
-docker build --target validator -t prysm-validator:local -f Dockerfile.prysm-builder .
+docker build --no-cache --target validator -t prysm-validator:local -f Dockerfile.prysm-builder .
 
 # Cleanup
 rm Dockerfile.prysm-builder

@@ -27,11 +27,8 @@ services:
           --txpool.globalslots=200000 \
           --txpool.globalqueue=200000 \
           --txpool.accountslots=512 \
-          --txpool.accountqueue=256 \
-          --txpool.pricebump=1 \
           --txpool.pricelimit=1 \
-          --txpool.nolocals \
-          --txpool.lifetime=3h \
+          --txpool.pricebump=1 \
           --db.pagesize=16k \
           --batchSize=512M \
           --prune.mode=full \
