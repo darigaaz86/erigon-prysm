@@ -29,9 +29,12 @@ services:
           --txpool.accountslots=512 \
           --txpool.pricelimit=1 \
           --txpool.pricebump=1 \
-          --db.pagesize=16k \
-          --batchSize=512M \
-          --prune.mode=full \
+          --db.pagesize=32KB \
+          --batchSize=1G \
+          --prune.mode=minimal \
+          --db.read.concurrency=512 \
+          --state.cache=4GB \
+          --sync.parallel-state-flushing=true \
           --metrics --metrics.addr=0.0.0.0 --metrics.port=6060 \
           --pprof --pprof.addr=0.0.0.0 --pprof.port=6061 \
           --log.console.verbosity=info
