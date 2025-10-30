@@ -13,7 +13,7 @@ variable "ami_id" {
 variable "instance_type" {
   description = "EC2 instance type for blockchain node"
   type        = string
-  default     = "m6i.2xlarge"
+  default     = "c6i.8xlarge"
 }
 
 variable "public_key_path" {

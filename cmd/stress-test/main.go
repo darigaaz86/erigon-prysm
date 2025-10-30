@@ -59,10 +59,12 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func generateAccounts(count int) []*Account {
+func generateAccounts(count int, seed string) []*Account {
 	accounts := make([]*Account, count)
 	for i := 0; i < count; i++ {
-		key, err := crypto.GenerateKey()
+		// Generate deterministic key from seed + index
+		seedBytes := crypto.Keccak256([]byte(fmt.Sprintf("%s-%d", seed, i)))
+		key, err := crypto.ToECDSA(seedBytes)
 		if err != nil {
 			log.Fatalf("Failed to generate key: %v", err)
 		}
@@ -115,10 +117,10 @@ func main() {
 	genesisAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 	fmt.Printf("Genesis Address: %s\n\n", genesisAddress.Hex())
 
-	// Generate sender and recipient accounts
+	// Generate sender and recipient accounts (deterministic based on chain ID)
 	fmt.Println("Generating accounts...")
-	senderAccounts := generateAccounts(*numSenders)
-	recipientAccounts := generateAccounts(*numRecipients)
+	senderAccounts := generateAccounts(*numSenders, fmt.Sprintf("sender-%d", *chainID))
+	recipientAccounts := generateAccounts(*numRecipients, fmt.Sprintf("recipient-%d", *chainID))
 	fmt.Printf("Generated %d sender accounts and %d recipient accounts\n\n", *numSenders, *numRecipients)
 
 	// Setup phase: Fund sender accounts

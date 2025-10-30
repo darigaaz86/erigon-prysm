@@ -82,8 +82,10 @@ resource "aws_instance" "blockchain_node" {
   vpc_security_group_ids = [aws_security_group.blockchain_sg.id]
 
   root_block_device {
-    volume_size = 100
+    volume_size = 500
     volume_type = "gp3"
+    iops        = 10000
+    throughput  = 500
   }
 
   tags = {

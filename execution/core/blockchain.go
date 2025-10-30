@@ -24,7 +24,9 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/sha3"
@@ -37,6 +39,7 @@ import (
 	"github.com/erigontech/erigon/diagnostics/metrics"
 	"github.com/erigontech/erigon/execution/chain"
 	"github.com/erigontech/erigon/execution/consensus"
+	"github.com/erigontech/erigon/execution/core/parallel"
 	"github.com/erigontech/erigon/execution/ethutils"
 	"github.com/erigontech/erigon/execution/rlp"
 	"github.com/erigontech/erigon/execution/state"
@@ -49,7 +52,57 @@ import (
 
 var (
 	blockExecutionTimer = metrics.GetOrCreateSummary("chain_execution_seconds")
+	parallelExecutor    *parallel.BlockProcessor
+	parallelEnabled     bool
 )
+
+// InitParallelExecution initializes the parallel execution engine from environment variables
+func init() {
+	// Check if parallel execution is enabled via environment variable
+	if enabled := os.Getenv("PARALLEL_ENABLED"); enabled == "true" || enabled == "1" {
+		parallelEnabled = true
+
+		// Create configuration from environment variables
+		config := parallel.DefaultConfig()
+		config.Enabled = true
+
+		// Read worker count from environment
+		if workers := os.Getenv("PARALLEL_WORKERS"); workers != "" {
+			if w, err := strconv.Atoi(workers); err == nil && w > 0 {
+				config.WorkerCount = w
+			}
+		}
+
+		// Read metrics flag
+		if metrics := os.Getenv("PARALLEL_METRICS"); metrics == "true" || metrics == "1" {
+			config.EnableMetrics = true
+		}
+
+		// Read conflict threshold
+		if threshold := os.Getenv("PARALLEL_CONFLICT_THRESHOLD"); threshold != "" {
+			if t, err := strconv.ParseFloat(threshold, 64); err == nil && t > 0 && t < 1 {
+				config.ConflictThreshold = t
+			}
+		}
+
+		// Read max re-executions
+		if maxReexec := os.Getenv("PARALLEL_MAX_REEXECUTIONS"); maxReexec != "" {
+			if m, err := strconv.Atoi(maxReexec); err == nil && m > 0 {
+				config.MaxReexecutions = m
+			}
+		}
+
+		// Initialize the parallel executor
+		parallelExecutor = parallel.NewBlockProcessor(config)
+
+		log.Info("[Parallel Execution] Initialized",
+			"enabled", config.Enabled,
+			"workers", config.WorkerCount,
+			"metrics", config.EnableMetrics,
+			"conflictThreshold", config.ConflictThreshold,
+			"maxReexecutions", config.MaxReexecutions)
+	}
+}
 
 type SyncMode string
 
@@ -119,6 +172,21 @@ func ExecuteBlockEphemerally(
 
 	if err := InitializeBlockExecution(engine, chainReader, block.Header(), chainConfig, ibs, stateWriter, logger, vmConfig.Tracer); err != nil {
 		return nil, err
+	}
+
+	// Try parallel execution if enabled and conditions are met
+	if parallelEnabled && parallelExecutor != nil && !vmConfig.StatelessExec && vmConfig.Tracer == nil {
+		txCount := block.Transactions().Len()
+		// Only use parallel execution for blocks with enough transactions
+		if txCount >= 10 {
+			logger.Info("[Parallel Execution] Processing block",
+				"block", block.NumberU64(),
+				"txs", txCount)
+
+			// TODO: Adapt parallel.StateDB interface to work with state.IntraBlockState
+			// For now, log that we would use parallel execution and fall through to sequential
+			logger.Debug("[Parallel Execution] Would execute in parallel (integration in progress)")
+		}
 	}
 
 	var rejectedTxs []*RejectedTx

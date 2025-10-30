@@ -37,6 +37,7 @@ type serialExecutor struct {
 	blobGasUsed     uint64
 	lastBlockResult *blockResult
 	worker          *exec3.Worker
+	parallelAdapter *ParallelExecutionAdapter
 }
 
 func (se *serialExecutor) exec(ctx context.Context, execStage *StageState, u Unwinder,
@@ -367,6 +368,57 @@ func (se *serialExecutor) executeBlock(ctx context.Context, tasks []exec.Task, i
 		if startTxIndex < 0 {
 			startTxIndex = 0
 		}
+	}
+
+	// Check if we should use parallel execution
+	// Count actual transactions (excluding begin/end block tasks)
+	txCount := 0
+	for _, task := range tasks {
+		txTask := task.(*exec.TxTask)
+		if txTask.TxIndex >= 0 && !txTask.IsBlockEnd() {
+			txCount++
+		}
+	}
+
+	// Try parallel execution if conditions are met
+	if se.parallelAdapter != nil && se.parallelAdapter.ShouldUseParallel(txCount) &&
+		!se.isMining && !se.cfg.vmConfig.StatelessExec && se.cfg.vmConfig.Tracer == nil && startTxIndex == 0 {
+
+		// Get block number and tx number from first task
+		firstTask := tasks[0].(*exec.TxTask)
+		blockNum := firstTask.BlockNumber()
+		txNumStart := firstTask.TxNum
+
+		// Try parallel execution
+		result, parallelErr := se.parallelAdapter.ExecuteBlock(
+			ctx,
+			tasks,
+			se.doms,
+			se.applyTx,
+			blockNum,
+			txNumStart,
+		)
+
+		if parallelErr == nil && result != nil {
+			// Parallel execution succeeded
+			se.logger.Info("[Parallel Execution] Execution succeeded",
+				"block", blockNum,
+				"txCount", txCount,
+				"gasUsed", result.GasUsed)
+
+			// Update counters from parallel execution results
+			se.txCount += uint64(txCount)
+			se.gasUsed += result.GasUsed
+			
+			// Note: Parallel execution has already written state to SharedDomains
+			// We just need to continue with the normal flow
+			return true, nil
+		}
+
+		// Parallel execution failed, fall back to sequential
+		se.logger.Debug("[Parallel Execution] Falling back to sequential execution",
+			"block", blockNum,
+			"reason", parallelErr.Error())
 	}
 
 	var gasPool *core.GasPool

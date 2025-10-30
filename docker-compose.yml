@@ -24,20 +24,27 @@ services:
           --authrpc.addr=0.0.0.0 --authrpc.port=8551 \
           --authrpc.vhosts=* --authrpc.jwtsecret=/jwt/jwt.hex \
           --nodiscover --maxpeers=5 \
-          --txpool.globalslots=200000 \
-          --txpool.globalqueue=200000 \
-          --txpool.accountslots=512 \
+          --txpool.globalslots=500000 \
+          --txpool.globalqueue=500000 \
+          --txpool.accountslots=2048 \
           --txpool.pricelimit=1 \
           --txpool.pricebump=1 \
           --db.pagesize=32KB \
           --batchSize=1G \
           --prune.mode=minimal \
-          --db.read.concurrency=512 \
-          --state.cache=4GB \
+          --db.read.concurrency=1024 \
+          --state.cache=32GB \
           --sync.parallel-state-flushing=true \
           --metrics --metrics.addr=0.0.0.0 --metrics.port=6060 \
           --pprof --pprof.addr=0.0.0.0 --pprof.port=6061 \
           --log.console.verbosity=info
+    environment:
+      - PARALLEL_ENABLED=true
+      - PARALLEL_WORKERS=32
+      - PARALLEL_METRICS=true
+      - PARALLEL_PANIC_RECOVERY=true
+      - PARALLEL_FALLBACK=true
+      - PARALLEL_ADAPTIVE_THRESHOLD=true
     ports:
       - "8545:8545"
       - "8546:8546"
@@ -54,11 +61,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '7'
-          memory: 16G
-        reservations:
-          cpus: '5'
+          cpus: '6'
           memory: 12G
+        reservations:
+          cpus: '4'
+          memory: 8G
     ulimits:
       nofile:
         soft: 65536

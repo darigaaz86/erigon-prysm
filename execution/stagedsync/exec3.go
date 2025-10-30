@@ -315,7 +315,9 @@ func ExecV3(ctx context.Context,
 				hooks:                 hooks,
 				lastCommittedTxNum:    doms.TxNum(),
 				lastCommittedBlockNum: blockNum,
-			}}
+			},
+			parallelAdapter: NewParallelExecutionAdapter(logger),
+		}
 
 		defer func() {
 			se.LogComplete(stepsInDb)
