@@ -11,75 +11,24 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Security Group
-resource "aws_security_group" "blockchain_sg" {
-  name_prefix = "blockchain-node-sg"
-  description = "Security group for blockchain nodes"
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 8545
-    to_port     = 8545
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 8546
-    to_port     = 8546
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 30303
-    to_port     = 30303
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 30303
-    to_port     = 30303
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "blockchain-node-sg"
-  }
+# Get default VPC
+data "aws_vpc" "default" {
+  default = true
 }
 
-# Key Pair
-resource "aws_key_pair" "blockchain_key" {
-  key_name   = "blockchain-key-${formatdate("YYYYMMDDhhmmss", timestamp())}"
-  public_key = file(var.public_key_path)
-
-  lifecycle {
-    ignore_changes = [key_name]
-  }
+# Get default security group
+data "aws_security_group" "default" {
+  vpc_id = data.aws_vpc.default.id
+  name   = "default"
 }
 
 # Blockchain Node EC2
 resource "aws_instance" "blockchain_node" {
   ami           = var.ami_id
   instance_type = var.instance_type
-  key_name      = aws_key_pair.blockchain_key.key_name
+  key_name      = var.key_name
 
-  vpc_security_group_ids = [aws_security_group.blockchain_sg.id]
+  vpc_security_group_ids = [data.aws_security_group.default.id]
 
   root_block_device {
     volume_size = 500
@@ -98,9 +47,9 @@ resource "aws_instance" "blockchain_node" {
 resource "aws_instance" "tps_tester" {
   ami           = var.ami_id
   instance_type = "t3.medium"
-  key_name      = aws_key_pair.blockchain_key.key_name
+  key_name      = var.key_name
 
-  vpc_security_group_ids = [aws_security_group.blockchain_sg.id]
+  vpc_security_group_ids = [data.aws_security_group.default.id]
 
   tags = {
     Name = "tps-tester"

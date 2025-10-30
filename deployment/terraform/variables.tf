@@ -16,8 +16,8 @@ variable "instance_type" {
   default     = "c6i.8xlarge"
 }
 
-variable "public_key_path" {
-  description = "Path to SSH public key"
+variable "key_name" {
+  description = "Name of existing EC2 key pair"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default     = "chengfeng-key"
 }
